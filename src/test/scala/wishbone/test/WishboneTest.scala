@@ -37,13 +37,17 @@ class WishboneSharedBusInterconnectionTester(slaves: Int, masters: Int) extends 
 }
 
 class ATester extends BasicTester {
+  val (cnt, wrap) = Counter(Bool(true), 2)
+
   val slaves = nSlaveIos(3)
   WishboneSharedBusInterconnection(
     new Module { val io = new WishboneMasterIO() }.io,
     slaves
   )
-  assert(slaves(0).strobe)
-  stop()
+  assert(slaves(0).strobe === Bool(false))
+  when(wrap){
+    stop()
+  }
 }
 
 class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
@@ -69,15 +73,8 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
 
   property("Slave 0 does not receive a strobe when none of the masters are strobing"){
     assertTesterPasses{
-      new BasicTester {
-        val slaves = nSlaveIos(3)
-        WishboneSharedBusInterconnection(
-          new Module { val io = new WishboneMasterIO() }.io,
-          slaves
-        )
-        assert(slaves(0).strobe)
-        stop()
-      }
+      new BasicTester { new ATester() }
     }
   }
+
 }
