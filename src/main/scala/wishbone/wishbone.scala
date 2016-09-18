@@ -29,6 +29,10 @@ class WishboneMasterIO(portSize: Int = 32, granularity: Int = 8) extends Bundle 
 
 object WishboneSharedBusInterconnection
 {
+  def apply(master: WishboneMasterIO, slaves : Seq[WishboneMasterIO]){ apply(List(master), slaves) }
+  def apply(masters: Seq[WishboneMasterIO], slave : WishboneMasterIO){ apply(masters, List(slave)) }
+  def apply(master: WishboneMasterIO, slave : WishboneMasterIO){ apply(List(master), List(slave)) }
+
   def apply(
     masters: Seq[WishboneMasterIO],
     slaves : Seq[WishboneMasterIO]

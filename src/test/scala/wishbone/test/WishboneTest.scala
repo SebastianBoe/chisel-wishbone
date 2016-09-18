@@ -36,25 +36,48 @@ class WishboneSharedBusInterconnectionTester(slaves: Int, masters: Int) extends 
   stop()
 }
 
+class ATester extends BasicTester {
+  val slaves = nSlaveIos(3)
+  WishboneSharedBusInterconnection(
+    new Module { val io = new WishboneMasterIO() }.io,
+    slaves
+  )
+  assert(slaves(0).strobe)
+  stop()
+}
+
 class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
   property("Compiles with x masters and y slaves, for x,y in [0,3]"){
-    forAll(Gen.choose(0, 3), Gen.choose(0, 3)) {
-      (num_masters: Int, num_slaves: Int) =>
       assertTesterPasses{
         new BasicTester {
-          WishboneSharedBusInterconnection(
-            nMasterIos(num_masters),
-            nSlaveIos (num_slaves)
-          )
+          for(num_masters <- 0 to 3; num_slaves <- 0 to 3) {
+            WishboneSharedBusInterconnection(
+              nMasterIos(num_masters),
+              nSlaveIos (num_slaves)
+            )
+          }
           stop()
         }
-      }
     }
   }
 
-  property("Makes some kind of sense"){
+  property("A slave receives a strobe when all masters make requests"){
     assertTesterPasses{
       new WishboneSharedBusInterconnectionTester(1, 1)
+    }
+  }
+
+  property("Slave 0 does not receive a strobe when none of the masters are strobing"){
+    assertTesterPasses{
+      new BasicTester {
+        val slaves = nSlaveIos(3)
+        WishboneSharedBusInterconnection(
+          new Module { val io = new WishboneMasterIO() }.io,
+          slaves
+        )
+        assert(slaves(0).strobe)
+        stop()
+      }
     }
   }
 }
