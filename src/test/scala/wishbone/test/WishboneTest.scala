@@ -7,9 +7,6 @@ import wishbone.WishboneSharedBusInterconnection
 import Chisel._
 import Chisel.testers._
 import wishbone._
-import org.scalatest._
-import org.scalatest.prop._
-import org.scalacheck._
 
 class ExampleMaster extends Module {
   val io = new WishboneMasterIO()
@@ -24,32 +21,6 @@ class ExampleSlave extends Module {
 object nMasterIos { def apply(i: Int) = for (i <- 0 until i) yield Module(new ExampleMaster()).io }
 object nSlaveIos  { def apply(i: Int) = for (i <- 0 until i) yield Module(new ExampleSlave ()).io }
 
-class WishboneSharedBusInterconnectionTester(slaves: Int, masters: Int) extends BasicTester {
-  val mastersIO = nMasterIos(masters)
-  val slavesIO  = nSlaveIos (slaves)
-
-  WishboneSharedBusInterconnection(
-    mastersIO,
-    slavesIO
-  )
-  assert(slavesIO(0).strobe)
-  stop()
-}
-
-class ATester extends BasicTester {
-  val (cnt, wrap) = Counter(Bool(true), 2)
-
-  val slaves = nSlaveIos(3)
-  WishboneSharedBusInterconnection(
-    new Module { val io = new WishboneMasterIO() }.io,
-    slaves
-  )
-  assert(slaves(0).strobe === Bool(false))
-  when(wrap){
-    stop()
-  }
-}
-
 class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
   property("Compiles with x masters and y slaves, for x,y in [0,3]"){
       assertTesterPasses{
@@ -60,6 +31,7 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
               nSlaveIos (num_slaves)
             )
           }
+          Chisel.assert(Bool(false) === Bool(false))
           stop()
         }
     }
@@ -67,13 +39,51 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
 
   property("A slave receives a strobe when all masters make requests"){
     assertTesterPasses{
-      new WishboneSharedBusInterconnectionTester(1, 1)
+      new BasicTester {
+        val mastersIO = nMasterIos(1)
+        val slavesIO  = nSlaveIos (1)
+
+        WishboneSharedBusInterconnection(
+          mastersIO,
+          slavesIO
+        )
+        Chisel.assert(slavesIO(0).strobe)
+        stop()
+      }
     }
   }
 
   property("Slave 0 does not receive a strobe when none of the masters are strobing"){
     assertTesterPasses{
-      new BasicTester { new ATester() }
+      new BasicTester{
+        val max = 3
+        val cnt = Counter(max)
+        when(Bool(true)) { cnt.inc() }
+        when(cnt.value === UInt(max-1)) {
+          stop()
+        }
+
+        val slaves = nSlaveIos(3)
+        WishboneSharedBusInterconnection(
+          Module(new Module { val io = new WishboneMasterIO() }).io,
+          slaves
+        )
+        Chisel.assert(slaves(0).strobe === Bool(false))
+      }
+    }
+  }
+
+  property("Only one slave is selected at a time"){
+    assertTesterPasses{
+      new BasicTester{
+        val slaves = nSlaveIos(2)
+        WishboneSharedBusInterconnection(
+          nMasterIos(3),
+          slaves
+        )
+        Chisel.assert(slaves(0).strobe ^ slaves(1).strobe)
+        stop()
+      }
     }
   }
 

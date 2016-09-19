@@ -37,6 +37,13 @@ object WishboneSharedBusInterconnection
     masters: Seq[WishboneMasterIO],
     slaves : Seq[WishboneMasterIO]
   ) {
-    slaves.foreach(_.strobe := Bool(true))
+    if(masters.isEmpty || slaves.isEmpty){
+      return
+    }
+    slaves.foreach(
+      _.strobe := Cat(
+        masters.map(x => x.strobe)
+      ).orR()
+    )
   }
 }
