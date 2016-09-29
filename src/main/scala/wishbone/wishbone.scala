@@ -36,8 +36,10 @@ object WishboneSharedBusInterconnection
   def apply(
     masters: Seq[WishboneMasterIO],
     slaves : Seq[WishboneMasterIO]
-  ) {
+  ) : Unit = {
     if(masters.isEmpty || slaves.isEmpty){
+      // We need at least one master and at least one slave to make a
+      // shared bus.
       return
     }
     slaves.foreach(
