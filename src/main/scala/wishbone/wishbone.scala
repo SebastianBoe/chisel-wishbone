@@ -12,14 +12,14 @@ class WishboneMasterIO(portSize: Int = 32, granularity: Int = 8) extends Bundle 
   override def cloneType: this.type =
     new WishboneMasterIO(portSize, granularity).asInstanceOf[this.type]
 
-  val address   = UInt(OUTPUT, portSize)
+  val address      = UInt(OUTPUT, portSize)
   val dataToSlave  = UInt(OUTPUT , portSize) // DAT_O on master, DAT_I on slave
   val dataToMaster = UInt(INPUT  , portSize) // DAT_I on master, DAT_O on slave
-  val writeEnable = Bool(OUTPUT)
-  val select = Bool(OUTPUT)
-  val strobe = Bool(OUTPUT)
-  val ack = Bool(INPUT)
-  val cycle = Bool(OUTPUT)
+  val writeEnable  = Bool(OUTPUT)
+  val select       = Bool(OUTPUT)
+  val strobe       = Bool(OUTPUT)
+  val ack          = Bool(INPUT)
+  val cycle        = Bool(OUTPUT)
 
   // TODO: Understand and then support tag's
   // val tgd = UInt(OUTPUT, tagSize)
