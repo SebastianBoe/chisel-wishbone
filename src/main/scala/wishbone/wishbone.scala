@@ -4,13 +4,20 @@ package wishbone
 
 import Chisel._
 
-class WishboneMasterIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
+trait WishboneIp {
+  def IO() : WishboneIO
+}
+
+trait WishboneSlave  extends WishboneIp {  def inAddressSpace(address: UInt): Bool }
+trait WishboneMaster extends WishboneIp { }
+
+class WishboneIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
 /**
  * See wbspec_b4.pdf Chapter 2. Interface Specification.
  * */
 
   override def cloneType: this.type =
-    new WishboneMasterIO(portSize, granularity).asInstanceOf[this.type]
+    new WishboneIO(portSize, granularity).asInstanceOf[this.type]
 
   val address      = UInt(OUTPUT, portSize)
   val dataToSlave  = UInt(OUTPUT , portSize) // DAT_O on master, DAT_I on slave
@@ -29,23 +36,36 @@ class WishboneMasterIO(portSize: Int = 32, granularity: Int = 8) extends Bundle 
 
 object WishboneSharedBusInterconnection
 {
-  def apply(master: WishboneMasterIO, slaves : Seq[WishboneMasterIO]){ apply(List(master), slaves) }
-  def apply(masters: Seq[WishboneMasterIO], slave : WishboneMasterIO){ apply(masters, List(slave)) }
-  def apply(master: WishboneMasterIO, slave : WishboneMasterIO){ apply(List(master), List(slave)) }
+  // Convenience functions to be able to call this function with either a list or an element
+  def apply(master  : WishboneMaster      , slaves : Seq[WishboneSlave]){ apply(List(master), slaves     ) }
+  def apply(masters : Seq[WishboneMaster] , slave  : WishboneSlave     ){ apply(masters     , List(slave)) }
+  def apply(master  : WishboneMaster      , slave  : WishboneSlave     ){ apply(List(master), List(slave)) }
 
   def apply(
-    masters: Seq[WishboneMasterIO],
-    slaves : Seq[WishboneMasterIO]
+    masters: Seq[WishboneMaster],
+    slaves : Seq[WishboneSlave]
   ) : Unit = {
     if(masters.isEmpty || slaves.isEmpty){
       // We need at least one master and at least one slave to make a
       // shared bus.
       return
     }
-    slaves.foreach(
-      _.strobe := Cat(
-        masters.map(x => x.strobe)
-      ).orR()
-    )
+
+    val masterIos = masters.map(m => m.IO())
+
+    // Use a Counter and a Vec to round-robin select one of the
+    // masters
+    val (masterIndex, wrap) = Counter(Bool(true), masters.size)
+    val masterIo = Vec(masterIos)(masterIndex)
+
+    for (slave <- slaves) {
+      // Default to connecting all of the slave's signals to the
+      // master
+      val slaveIo = slave.IO()
+      slaveIo := masterIo
+
+      slaveIo.strobe :=
+        masterIo.strobe && slave.inAddressSpace(masterIo.address)
+    }
   }
 }
