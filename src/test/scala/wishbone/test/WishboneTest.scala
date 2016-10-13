@@ -64,10 +64,7 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
       new BasicTester{
         val max = 3
         val cnt = Counter(max)
-        when(Bool(true)) { cnt.inc() }
-        when(cnt.value === UInt(max-1)) {
-          stop()
-        }
+        when( cnt.inc() ) { stop() }
 
         val slaves = nSlaves(3)
         WishboneSharedBusInterconnection(
