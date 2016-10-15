@@ -80,8 +80,9 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
     assertTesterPasses{
       new BasicTester{
         val slaves = nSlaves(2)
+        val masters = nMasters(3)
         WishboneSharedBusInterconnection(
-          nMasters(3),
+          masters,
           slaves
         )
         Chisel.assert(slaves(0).io.strobe ^ slaves(1).io.strobe)
