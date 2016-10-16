@@ -67,5 +67,14 @@ object WishboneSharedBusInterconnection
       slaveIo.strobe :=
         masterIo.strobe && slave.inAddressSpace(masterIo.address)
     }
+
+    ////////////////////////////////////////////////////////////////
+    //                  Input validation                          //
+    ////////////////////////////////////////////////////////////////
+
+    // The masterIo address triggers an address match for at most 1 slave
+    val matches : Seq[Bool] = slaves.map(_.inAddressSpace(masterIo.address))
+    val num_matches = PopCount(matches)
+    Chisel.assert(num_matches <= 1.U, "The address space of slaves must not overlap.")
   }
 }

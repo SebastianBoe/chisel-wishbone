@@ -133,4 +133,22 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
       }
     }
   }
+
+  property("An assert will trigger if the slave address spaces overlap"){
+    assertTesterFails{ // NB: assertTesterFails, not assertTesterPasses
+      new BasicTester
+      {
+        val slave_0 = Module(new ExampleSlave(0))
+        val slave_1 = Module(new ExampleSlave(0))
+        val master  = Module(new ExampleMaster( ))
+
+        WishboneSharedBusInterconnection(
+          master,
+          List(slave_0, slave_1)
+        )
+
+        val cnt = Counter(6); when( cnt.inc() ) { stop() };
+      }
+    }
+  }
 }
