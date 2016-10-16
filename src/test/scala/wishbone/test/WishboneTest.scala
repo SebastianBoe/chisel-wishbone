@@ -186,6 +186,7 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
           Chisel.assert(slave.io.dataToSlave === master.io.dataToSlave)
           Chisel.assert(slave.io.select      === master.io.select)
         }
+        stop()
       }
     }
   }
