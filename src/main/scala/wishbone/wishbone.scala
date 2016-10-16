@@ -23,7 +23,7 @@ class WishboneIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
   val dataToSlave  = UInt(OUTPUT , portSize) // DAT_O on master, DAT_I on slave
   val dataToMaster = UInt(INPUT  , portSize) // DAT_I on master, DAT_O on slave
   val writeEnable  = Bool(OUTPUT)
-  val select       = Bool(OUTPUT)
+  val select       = Vec( portSize / granularity, Bool() ).asOutput
   val strobe       = Bool(OUTPUT)
   val ack          = Bool(INPUT)
   val cycle        = Bool(OUTPUT)

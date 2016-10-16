@@ -15,6 +15,10 @@ class ExampleMaster extends Module with WishboneMaster {
 
   io.cycle   := Bool(true)
   io.strobe  := Bool(true)
+  val myVec = Wire( Vec(32 / 8, Bool()) )
+  myVec foreach (_ := Bool(true))
+
+  io.select      := myVec
 }
 
 class ExampleSlave(i: Int) extends Module with WishboneSlave {
