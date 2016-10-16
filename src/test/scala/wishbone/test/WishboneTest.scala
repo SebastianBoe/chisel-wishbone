@@ -67,19 +67,19 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
     }
   }
 
-  property("Slave 0 does not receive a strobe when none of the masters are strobing"){
+  property("In a 1x1 bus, when the master isn't strobing the slave won't receive a strobe."){
     assertTesterPasses{
       new BasicTester{
         val max = 3
         val cnt = Counter(max)
         when( cnt.inc() ) { stop() }
 
-        val slaves = nSlaves(3)
+        val slave = Module(new ExampleSlave(0))
         WishboneSharedBusInterconnection(
           Module(new Module with WishboneMaster { val io = new WishboneIO(); def IO() = io }),
-          slaves
+          slave
         )
-        Chisel.assert(slaves(0).io.strobe === Bool(false))
+        Chisel.assert(slave.io.strobe === Bool(false))
       }
     }
   }
