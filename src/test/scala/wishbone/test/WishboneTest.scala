@@ -13,8 +13,8 @@ class ExampleMaster extends Module with WishboneMaster {
 
   def IO() = io // TODO: How to get rid of this boilerplate?
 
-  io.cycle := Bool(true)
-  io.strobe := Bool(true)
+  io.cycle   := Bool(true)
+  io.strobe  := Bool(true)
 }
 
 class ExampleSlave(i: Int) extends Module with WishboneSlave {
