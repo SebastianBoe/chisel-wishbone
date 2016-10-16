@@ -51,7 +51,7 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
     }
   }
 
-  property("A slave receives a strobe when all masters make requests"){
+  property("In a 1x1 bus, the slave receives a strobe when the master makes a request"){
     assertTesterPasses{
       new BasicTester {
         val mastersIO = nMasters(1)
@@ -84,7 +84,7 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
     }
   }
 
-  property("Only one slave is selected at a time"){
+  property("Only one slave recieves a strobe at a time"){
     assertTesterPasses{
       new BasicTester{
         val slaves = nSlaves(2)
