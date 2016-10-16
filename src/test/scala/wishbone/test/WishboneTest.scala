@@ -151,4 +151,33 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
       }
     }
   }
+
+  property("""'Once the bus is arbitrated, the output signals from the
+           selected MASTER are routed, via multiplexors, onto the
+           shared buses. For example, if MASTER #0 obtains the bus,
+           then the address lines [ADR_O()] from MASTER #0 are routed
+           to shared bus [ADR()]. The same thing happens to the data
+           out [DAT_O()], select out [SEL_O()], write enable [WE_O]
+           and strobe [STB_O] signals. The shared bus output signals
+           are routed to the inputs on the SLAVE interfaces.' --
+           Wishbone B4"""){
+    assertTesterPasses{
+      new BasicTester
+      {
+        val masters = nMasters(2)
+        val slaves = nSlaves(2)
+        WishboneSharedBusInterconnection(
+          masters,
+          slaves
+        )
+
+        val master = masters(0)
+        for (slave <- slaves) {
+          Chisel.assert(slave.io.address     === master.io.address)
+          Chisel.assert(slave.io.dataToSlave === master.io.dataToSlave)
+          Chisel.assert(slave.io.select      === master.io.select)
+        }
+      }
+    }
+  }
 }
