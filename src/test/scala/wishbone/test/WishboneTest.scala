@@ -31,6 +31,8 @@ class ExampleSlave(i: Int) extends Module with WishboneSlave {
 
   def IO() = io
   def inAddressSpace(address: UInt) = address === UInt(i)
+
+  io.ack := Bool(true)
 }
 
 object nMasters { def apply(i: Int) = for (i <- 0 until i) yield Module(new ExampleMaster( )) }
@@ -186,6 +188,32 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
           Chisel.assert(slave.io.dataToSlave   === master.io.dataToSlave)
           Chisel.assert(slave.io.select.asUInt === master.io.select.asUInt)
         }
+        stop()
+      }
+    }
+  }
+  property("""'[the terminating signals [ACK_I], [RTY_I] and [ERR_I]]
+           are enabled at the MASTER that acquired the bus. For
+           example, if MASTER #0 is granted the bus by the arbiter,
+           then the [ACK_I], [RTY_I] and [ERR_I] are enabled at MASTER
+           #0.' -- Wishbone B4"""){
+    assertTesterPasses{
+      new BasicTester
+      {
+        val masters = nMasters(2)
+        val slaves = nSlaves(2)
+        WishboneSharedBusInterconnection(
+          masters,
+          slaves
+        )
+
+        val master = masters(0)
+
+        Chisel.assert(master.io.ack)
+        // TODO: Support rty and err
+        // Chisel.assert(master.io.rty)
+        // Chisel.assert(master.io.err)
+
         stop()
       }
     }
