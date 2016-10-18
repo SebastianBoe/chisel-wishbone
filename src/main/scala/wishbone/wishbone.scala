@@ -56,24 +56,23 @@ object WishboneSharedBusInterconnection
     // Use a Counter and a Vec to round-robin select one of the
     // masters
     val (masterIndex, wrap) = Counter(Bool(true), masters.size)
-    val masterIo = Vec(masterIos)(masterIndex)
+    val bus = Vec(masterIos)(masterIndex)
 
     for (slave <- slaves) {
-      // Default to connecting all of the slave's signals to the
-      // master
+      // Default to connecting all of the slave's signals to the bus
       val slaveIo = slave.IO()
-      slaveIo := masterIo
+      slaveIo <> bus
 
       slaveIo.strobe :=
-        masterIo.strobe && slave.inAddressSpace(masterIo.address)
+        bus.strobe && slave.inAddressSpace(bus.address)
     }
 
     ////////////////////////////////////////////////////////////////
     //                  Input validation                          //
     ////////////////////////////////////////////////////////////////
 
-    // The masterIo address triggers an address match for at most 1 slave
-    val matches : Seq[Bool] = slaves.map(_.inAddressSpace(masterIo.address))
+    // The bus address triggers an address match for at most 1 slave
+    val matches : Seq[Bool] = slaves.map(_.inAddressSpace(bus.address))
     val num_matches = PopCount(matches)
     Chisel.assert(num_matches <= 1.U, "The address space of slaves must not overlap.")
   }
