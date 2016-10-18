@@ -184,7 +184,7 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
         for (slave <- slaves) {
           Chisel.assert(slave.io.address     === master.io.address)
           Chisel.assert(slave.io.dataToSlave === master.io.dataToSlave)
-          Chisel.assert(slave.io.select      === master.io.select)
+          Chisel.assert(slave.io.select.asUInt === master.io.select.asUInt)
         }
         stop()
       }
