@@ -195,6 +195,9 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
       }
     }
   }
+}
+
+class A extends ChiselPropSpec {
   property("""'[the terminating signals [ACK_I], [RTY_I] and [ERR_I]]
            are enabled at the MASTER that acquired the bus. For
            example, if MASTER #0 is granted the bus by the arbiter,
@@ -212,12 +215,37 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
 
         val master = masters(0)
 
-        Chisel.assert(master.io.ack)
-        // TODO: Support rty and err
-        // Chisel.assert(master.io.rty)
-        // Chisel.assert(master.io.err)
+        val (cnt, done) = Counter(!reset, 20)
 
-        stop()
+        when(cnt === 0.U) { Chisel.assert(master.io.ack) }
+
+        when(done) { stop() }
+      }
+    }
+  }
+}
+
+class B extends ChiselPropSpec {
+  property("""'[the terminating signals [ACK_I], [RTY_I] and [ERR_I]]
+           are not enabled at the masters that don't aquire the bus.'
+           -- Wishbone B4, page 120 """){
+    assertTesterPasses{
+      new BasicTester
+      {
+        val masters = nMasters(2)
+        val slaves = nSlaves(2)
+        WishboneSharedBusInterconnection(
+          masters,
+          slaves
+        )
+
+        val disabled_master = masters(1)
+
+        val (cnt, done) = Counter(!reset, 20)
+
+        when(cnt === 0.U) { Chisel.assert(disabled_master.io.ack === Bool(false)) }
+
+        when(done) { stop() }
       }
     }
   }
