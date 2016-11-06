@@ -70,6 +70,23 @@ object WishboneSharedBusInterconnection
         bus.strobe && slave.inAddressSpace(bus.address)
     }
 
+    val slaveBus = Mux1H(
+      for ( slave <- slaves)
+        yield (
+        slave.inAddressSpace(bus.address),
+        slave.get_io()
+      )
+    )
+
+    for ( (masterIo, i) <- masterIos zipWithIndex){
+      val master_has_been_granted = UInt(i) === masterIndex
+      masterIo.ack := Mux(
+        master_has_been_granted,
+        slaveBus.ack,
+        Bool(false)
+      )
+    }
+
     ////////////////////////////////////////////////////////////////
     //                  Input validation                          //
     ////////////////////////////////////////////////////////////////
