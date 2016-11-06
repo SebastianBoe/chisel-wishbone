@@ -4,18 +4,21 @@ package examples.test
 
 import Chisel.iotesters._
 import wishbone.WishboneSharedBusInterconnection
-import Chisel._
 import Chisel.testers._
 import wishbone._
 
-class ExampleMaster extends Module with WishboneMaster {
-  val io = new WishboneIO()
+import chisel3._
+import chisel3.util._
+import chisel3.core.SeqUtils
 
-  def IO() = io // TODO: How to get rid of this boilerplate?
+class ExampleMaster extends Module with WishboneMaster {
+  val io = IO(new WishboneIO())
+
+  def get_io() = io // TODO: How to get rid of this boilerplate?
 
   io.cycle   := Bool(true)
   io.strobe  := Bool(true)
-  io.address := UInt(0)
+  io.address := 0.U
 
   io.dataToSlave := UInt(1)
 
@@ -27,9 +30,9 @@ class ExampleMaster extends Module with WishboneMaster {
 }
 
 class ExampleSlave(i: Int) extends Module with WishboneSlave {
-  val io = new WishboneIO().flip()
+  val io = IO(Flipped(new WishboneIO()))
 
-  def IO() = io
+  def get_io() = io
   def inAddressSpace(address: UInt) = address === UInt(i)
 
   io.ack := Bool(true)
@@ -87,7 +90,7 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
 
         val slave = Module(new ExampleSlave(0))
         WishboneSharedBusInterconnection(
-          Module(new Module with WishboneMaster { val io = new WishboneIO(); def IO() = io }),
+          Module(new Module with WishboneMaster { val io = IO(new WishboneIO()); def get_io() = io }),
           slave
         )
         Chisel.assert(slave.io.strobe === Bool(false))
@@ -116,15 +119,15 @@ class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
       {
         val slave = Module(
           new Module with WishboneSlave {
-            val io = new WishboneIO().flip()
-            def IO() = io
+            val io = IO(Flipped(new WishboneIO()))
+            def get_io() = io
             def inAddressSpace(address: UInt) : Bool = address === UInt(4)
           }
         )
 
         val master = Module( new Module with WishboneMaster {
-          val io = new WishboneIO()
-          def IO = io
+          val io = IO(new WishboneIO())
+          def get_io = io
           io.cycle := Bool(true)
           io.strobe := Bool(true)
           val (cnt, done) = Counter(!reset, 20)

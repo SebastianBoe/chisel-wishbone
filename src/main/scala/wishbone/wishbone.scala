@@ -2,10 +2,13 @@
 
 package wishbone
 
-import Chisel._
+import chisel3._
+import chisel3.util._
+import chisel3.testers._
+import chisel3.core.SeqUtils
 
 trait WishboneIp {
-  def IO() : WishboneIO
+  def get_io() : WishboneIO
 }
 
 trait WishboneSlave  extends WishboneIp {  def inAddressSpace(address: UInt): Bool }
@@ -19,14 +22,14 @@ class WishboneIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
   override def cloneType: this.type =
     new WishboneIO(portSize, granularity).asInstanceOf[this.type]
 
-  val address      = UInt(OUTPUT, portSize)
-  val dataToSlave  = UInt(OUTPUT , portSize) // DAT_O on master, DAT_I on slave
-  val dataToMaster = UInt(INPUT  , portSize) // DAT_I on master, DAT_O on slave
-  val writeEnable  = Bool(OUTPUT)
-  val select       = Vec( portSize / granularity, Bool() ).asOutput
-  val strobe       = Bool(OUTPUT)
-  val ack          = Bool(INPUT)
-  val cycle        = Bool(OUTPUT)
+  val address      = Output(UInt.width(portSize))
+  val dataToSlave  = Output(UInt.width(portSize)) // DAT_O on master, DAT_I on slave
+  val dataToMaster = Input (UInt.width(portSize)) // DAT_I on master, DAT_O on slave
+  val writeEnable  = Output(Bool())
+  val select       = Output(Vec( portSize / granularity, Bool() ))
+  val strobe       = Output(Bool())
+  val ack          = Input (Bool())
+  val cycle        = Output(Bool())
 
   // TODO: Understand and then support tag's
   // val tgd = UInt(OUTPUT, tagSize)
@@ -51,7 +54,7 @@ object WishboneSharedBusInterconnection
       return
     }
 
-    val masterIos = masters.map(m => m.IO())
+    val masterIos = masters.map(m => m.get_io())
 
     // Use a Counter and a Vec to round-robin select one of the
     // masters
@@ -60,7 +63,7 @@ object WishboneSharedBusInterconnection
 
     for (slave <- slaves) {
       // Default to connecting all of the slave's signals to the bus
-      val slaveIo = slave.IO()
+      val slaveIo = slave.get_io()
       slaveIo <> bus
 
       slaveIo.strobe :=
