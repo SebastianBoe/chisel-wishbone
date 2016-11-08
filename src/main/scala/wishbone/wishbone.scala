@@ -40,14 +40,11 @@ class WishboneIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
 object WishboneSharedBusInterconnection
 {
   // Convenience functions to be able to call this function with either a list or an element
-  def apply(master  : WishboneMaster      , slaves : Seq[WishboneSlave]){ apply(List(master), slaves     ) }
-  def apply(masters : Seq[WishboneMaster] , slave  : WishboneSlave     ){ apply(masters     , List(slave)) }
-  def apply(master  : WishboneMaster      , slave  : WishboneSlave     ){ apply(List(master), List(slave)) }
-
-  def apply(
-    masters: Seq[WishboneMaster],
-    slaves : Seq[WishboneSlave]
-  ) : Unit = {
+  def apply(master :     WishboneMaster , slave :     WishboneSlave ){ apply(List(master), List(slave)) }
+  def apply(master :     WishboneMaster , slaves: Seq[WishboneSlave]){ apply(List(master),      slaves) }
+  def apply(masters: Seq[WishboneMaster], slave :     WishboneSlave ){ apply(     masters, List(slave)) }
+  def apply(masters: Seq[WishboneMaster], slaves: Seq[WishboneSlave])
+  : Unit = {
     if(masters.isEmpty || slaves.isEmpty){
       // We need at least one master and at least one slave to make a
       // shared bus.
