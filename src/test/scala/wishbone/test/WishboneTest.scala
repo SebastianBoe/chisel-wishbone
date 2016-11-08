@@ -41,15 +41,16 @@ class ExampleSlave(i: Int) extends Module with WishboneSlave {
 object nMasters { def apply(i: Int) = for (i <- 0 until i) yield Module(new ExampleMaster( )) }
 object nSlaves  { def apply(i: Int) = for (i <- 0 until i) yield Module(new ExampleSlave (i)) }
 
-class WishboneSharedBusInterconnectionSpec extends ChiselPropSpec {
+class WishbonePropSpec extends ChiselPropSpec {
   // assertTesterFails is not yet in a released version of Chisel3. But
   // it is coming ...
   // TODO: Remove this function after the next Chisel3 release.
   def assertTesterFails(t: => BasicTester, additionalVResources: Seq[String] = Seq()): Unit = {
     assert(!runTester(t, additionalVResources))
   }
+}
 
-
+class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
   property("Compiles with x masters and y slaves, for x,y in [0,3]"){
       assertTesterPasses{
         new BasicTester {
