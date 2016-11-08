@@ -35,7 +35,7 @@ class ExampleSlave(i: Int) extends Module with WishboneSlave {
   def get_io() = io
   def inAddressSpace(address: UInt) = address === UInt(i)
 
-  io.ack := Bool(true)
+  io.ack := io.cycle && io.strobe
 }
 
 object nMasters { def apply(i: Int) = for (i <- 0 until i) yield Module(new ExampleMaster( )) }
