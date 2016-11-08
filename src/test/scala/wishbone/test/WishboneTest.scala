@@ -251,3 +251,42 @@ class B extends ChiselPropSpec {
     }
   }
 }
+
+class C extends WishbonePropSpec {
+  property("""An assertion is triggered if standard mode SLAVE
+           interfaces don't negate [ACK_O] when their [STB_I] is
+           negated.
+           -- B4, OBSERVATION 3.10"""){
+    assertTesterFails{
+      new BasicTester
+      {
+        WishboneSharedBusInterconnection(
+          // A master that negates strobe
+          Module(
+            new Module with WishboneMaster {
+              val io = IO(new WishboneIO())
+              def get_io = io
+              io.cycle := Bool(true)
+              io.strobe := Bool(false)
+              io.address := 0.U
+            }
+          ),
+          // A slave that violates the assertion.
+          Module(
+            new Module with WishboneSlave {
+              val io = IO(Flipped(new WishboneIO()))
+              def inAddressSpace(address: UInt) = Bool(true)
+              def get_io = io
+
+              // Slave drives ack, without checking if strobe is high.
+              io.ack := Bool(true)
+            }
+          )
+        )
+
+        stop()
+      }
+    }
+  }
+}
+

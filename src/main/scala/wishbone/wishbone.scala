@@ -97,5 +97,17 @@ object WishboneSharedBusInterconnection
     val matches : Seq[Bool] = slaves.map(_.inAddressSpace(bus.address))
     val num_matches = PopCount(matches)
     Chisel.assert(num_matches <= 1.U, "The address space of slaves must not overlap.")
+
+    // Slaves have to negate ACK_O when their STB_I is negated.
+    for (slaveIo <- slaveIos) {
+      Chisel.assert(
+        Mux(
+          slaveIo.strobe,
+          Bool(true),
+          slaveIo.ack === Bool(false)
+        ),
+        "Slaves must negate ack when their strobe is negated."
+      )
+    }
   }
 }
