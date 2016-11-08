@@ -54,7 +54,9 @@ object WishboneSharedBusInterconnection
       return
     }
 
+    // Utility structures
     val masterIos = masters.map(m => m.get_io())
+    val slaveIos  = slaves .map(s => s.get_io())
 
     // Use a Counter and a Vec to round-robin select one of the
     // masters
