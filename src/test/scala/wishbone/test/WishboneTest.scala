@@ -317,3 +317,24 @@ class D extends WishbonePropSpec {
     }
   }
 }
+
+class F extends WishbonePropSpec {
+  property("""A master will hold the bus until it is released."""){
+    assertTesterPasses{
+      new BasicTester
+      {
+        val masters = nMasters(2)
+        WishboneSharedBusInterconnection(
+          masters,
+          nSlaves(1)
+        )
+        val cnt = Counter(!reset, 6)
+
+        for ( master <- masters)
+          when(cnt._1 > 1.U) { Chisel.assert(master.io.ack === RegNext(master.io.ack)) }
+
+        when( cnt._2 ) { stop() }
+      }
+    }
+  }
+}

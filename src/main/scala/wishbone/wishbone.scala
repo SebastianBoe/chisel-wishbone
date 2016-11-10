@@ -55,9 +55,11 @@ object WishboneSharedBusInterconnection
     val masterIos = masters.map(_.io)
 
     // Use a Counter and a Vec to round-robin select one of the
-    // masters
-    val (masterIndex, wrap) = Counter(Bool(true), masters.size)
-    val bus = Vec(masterIos)(masterIndex)
+    // masters. When a master has been granted the bus, keep granting
+    // it until the master lets go.
+    val bus = Wire(new WishboneIO)
+    val (masterIndex, wrap) = Counter(! bus.cycle, masters.size)
+    bus := Vec(masterIos)(masterIndex)
 
     for (slave <- slaves) {
       // Default to connecting all of the slave's signals to the bus
