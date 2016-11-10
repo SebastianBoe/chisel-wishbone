@@ -290,3 +290,39 @@ class C extends WishbonePropSpec {
   }
 }
 
+class D extends WishbonePropSpec {
+  property("""Asynchronous slaves are supported."""){
+    assertTesterPasses{
+      new BasicTester
+      {
+        val master = Module(
+          new Module with WishboneMaster {
+            val io = IO(new WishboneIO())
+            def get_io = io
+            io.cycle   := Counter(!reset, 2)._2
+            io.strobe  := Bool(true)
+            io.address := 0.U
+          }
+        )
+
+        val slave = Module(
+          new Module with WishboneSlave {
+            val io = IO(Flipped(new WishboneIO()))
+            def inAddressSpace(address: UInt) = Bool(true)
+            def get_io = io
+            io.ack := io.cycle && io.strobe
+          }
+        )
+
+        WishboneSharedBusInterconnection(
+          master,
+          slave
+        )
+
+        Chisel.assert(master.io.ack === master.io.cycle)
+
+        val cnt = Counter(6); when( cnt.inc() ) { stop() };
+      }
+    }
+  }
+}
