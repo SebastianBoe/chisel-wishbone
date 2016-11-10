@@ -8,7 +8,7 @@ import chisel3.testers._
 import chisel3.core.SeqUtils
 
 trait WishboneIp {
-  def get_io() : WishboneIO
+  def io: WishboneIO
 }
 
 trait WishboneSlave  extends WishboneIp {  def inAddressSpace(address: UInt): Bool }
@@ -53,7 +53,6 @@ object WishboneSharedBusInterconnection
 
     // Utility structures
     val masterIos = masters.map(m => m.get_io())
-    val slaveIos  = slaves .map(s => s.get_io())
 
     // Use a Counter and a Vec to round-robin select one of the
     // masters
@@ -62,10 +61,9 @@ object WishboneSharedBusInterconnection
 
     for (slave <- slaves) {
       // Default to connecting all of the slave's signals to the bus
-      val slaveIo = slave.get_io()
-      slaveIo <> bus
+      slave.io <> bus
 
-      slaveIo.strobe :=
+      slave.io.strobe :=
         bus.strobe && slave.inAddressSpace(bus.address)
     }
 
@@ -73,7 +71,7 @@ object WishboneSharedBusInterconnection
       for ( slave <- slaves)
         yield (
         slave.inAddressSpace(bus.address),
-        slave.get_io()
+        slave.io
       )
     )
 
@@ -96,12 +94,12 @@ object WishboneSharedBusInterconnection
     Chisel.assert(num_matches <= 1.U, "The address space of slaves must not overlap.")
 
     // Slaves have to negate ACK_O when their STB_I is negated.
-    for (slaveIo <- slaveIos) {
+    for (slave <- slaves) {
       Chisel.assert(
         Mux(
-          slaveIo.strobe,
+          slave.io.strobe,
           Bool(true),
-          slaveIo.ack === Bool(false)
+          slave.io.ack === Bool(false)
         ),
         "Slaves must negate ack when their strobe is negated."
       )

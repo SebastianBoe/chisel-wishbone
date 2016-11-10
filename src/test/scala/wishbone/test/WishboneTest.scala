@@ -14,8 +14,6 @@ import chisel3.core.SeqUtils
 class ExampleMaster extends Module with WishboneMaster {
   val io = IO(new WishboneIO())
 
-  def get_io() = io // TODO: How to get rid of this boilerplate?
-
   io.cycle   := Bool(true)
   io.strobe  := Bool(true)
   io.address := 0.U
@@ -32,7 +30,6 @@ class ExampleMaster extends Module with WishboneMaster {
 class ExampleSlave(i: Int) extends Module with WishboneSlave {
   val io = IO(Flipped(new WishboneIO()))
 
-  def get_io() = io
   def inAddressSpace(address: UInt) = address === UInt(i)
 
   io.ack := io.cycle && io.strobe
@@ -91,7 +88,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
 
         val slave = Module(new ExampleSlave(0))
         WishboneSharedBusInterconnection(
-          Module(new Module with WishboneMaster { val io = IO(new WishboneIO()); def get_io() = io }),
+          Module(new Module with WishboneMaster { val io = IO(new WishboneIO()); }),
           slave
         )
         Chisel.assert(slave.io.strobe === Bool(false))
@@ -121,14 +118,12 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
         val slave = Module(
           new Module with WishboneSlave {
             val io = IO(Flipped(new WishboneIO()))
-            def get_io() = io
             def inAddressSpace(address: UInt) : Bool = address === UInt(4)
           }
         )
 
         val master = Module( new Module with WishboneMaster {
           val io = IO(new WishboneIO())
-          def get_io = io
           io.cycle := Bool(true)
           io.strobe := Bool(true)
           val (cnt, done) = Counter(!reset, 20)
@@ -265,7 +260,6 @@ class C extends WishbonePropSpec {
           Module(
             new Module with WishboneMaster {
               val io = IO(new WishboneIO())
-              def get_io = io
               io.cycle := Bool(true)
               io.strobe := Bool(false)
               io.address := 0.U
@@ -276,7 +270,6 @@ class C extends WishbonePropSpec {
             new Module with WishboneSlave {
               val io = IO(Flipped(new WishboneIO()))
               def inAddressSpace(address: UInt) = Bool(true)
-              def get_io = io
 
               // Slave drives ack, without checking if strobe is high.
               io.ack := Bool(true)
@@ -298,7 +291,6 @@ class D extends WishbonePropSpec {
         val master = Module(
           new Module with WishboneMaster {
             val io = IO(new WishboneIO())
-            def get_io = io
             io.cycle   := Counter(!reset, 2)._2
             io.strobe  := Bool(true)
             io.address := 0.U
@@ -309,7 +301,6 @@ class D extends WishbonePropSpec {
           new Module with WishboneSlave {
             val io = IO(Flipped(new WishboneIO()))
             def inAddressSpace(address: UInt) = Bool(true)
-            def get_io = io
             io.ack := io.cycle && io.strobe
           }
         )
