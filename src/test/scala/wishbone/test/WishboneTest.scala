@@ -318,6 +318,79 @@ class D extends WishbonePropSpec {
   }
 }
 
+class E extends WishbonePropSpec {
+  property("""Slow synchronous masters will be granted the bus until they are done with it."""){
+    assertTesterPasses{
+      new BasicTester
+      {
+        // Create 2 masters
+        val masters = for (i <- 1 to 2) yield Module(
+          new Module with WishboneMaster {
+            val io = IO(new WishboneIO())
+            // Drive the cycle signal for several cycles, start
+            // driving it after 1 and 2 cycles respectively for the
+            // two masters.
+            io.cycle   := Counter(!reset, 6)._1 >= i.U
+            // Have the strobe signal lagging 1 cycle behind.
+            io.strobe  := RegNext(io.cycle)
+            io.address := Mux(io.cycle && io.strobe, i.U, 0.U)
+          }
+        )
+
+        val slave = Module(
+          new Module with WishboneSlave {
+            val io = IO(Flipped(new WishboneIO()))
+            def inAddressSpace(address: UInt) = Bool(true)
+            io.ack := io.cycle && io.strobe
+          }
+        )
+
+        WishboneSharedBusInterconnection(
+          masters,
+          slave
+        )
+
+        val master = masters(0)
+        // masters(0) should get the bus because he requests it with
+        // his cycle signal one cycle before the other master.
+        val cnt = Counter(!reset, 16)
+        switch(cnt._1){
+          is(0.U) {
+            Chisel.assert(slave.io.cycle === 0.U)
+          }
+          is(1.U) {
+            Chisel.assert(slave.io.cycle  === 0.U)
+            Chisel.assert(slave.io.strobe === 0.U)
+          }
+          is(2.U) {
+            Chisel.assert(slave.io.cycle   === 1.U)
+            Chisel.assert(slave.io.strobe  === 1.U)
+            Chisel.assert(slave.io.address === 1.U)
+          }
+          is(3.U) {
+            Chisel.assert(slave.io.cycle   === 1.U)
+            Chisel.assert(slave.io.strobe  === 1.U)
+            Chisel.assert(slave.io.address === 1.U)
+            Chisel.assert(slave.io.ack)
+            Chisel.assert(master.io.ack)
+          }
+          is(4.U) {
+            Chisel.assert(slave.io.cycle   === 1.U)
+            Chisel.assert(slave.io.strobe  === 1.U)
+            Chisel.assert(slave.io.address === 1.U)
+            Chisel.assert(slave.io.ack)
+            Chisel.assert(master.io.ack)
+          }
+          is(5.U) {
+            stop()
+          }
+        }
+
+      }
+    }
+  }
+}
+
 class F extends WishbonePropSpec {
   property("""A master will hold the bus until it is released."""){
     assertTesterPasses{
