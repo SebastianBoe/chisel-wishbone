@@ -410,3 +410,41 @@ class F extends WishbonePropSpec {
     }
   }
 }
+
+class G extends WishbonePropSpec {
+  property("""When only one master is requesting the bus there is no
+           delay before the bus is granted to it."""){
+    assertTesterPasses{
+      new BasicTester
+      {
+        val a_bus_requesting_master = Module(
+          new Module with WishboneMaster {
+            val io = IO(new WishboneIO())
+            io.cycle   := !reset
+          }
+        )
+
+        val non_bus_requesting_masters = for( i <- 1 to 4) yield Module(
+          new Module with WishboneMaster {
+            val io = IO(new WishboneIO())
+            io.cycle   := Bool(false)
+          }
+        )
+
+        val slaves = nSlaves(6)
+        val masters = non_bus_requesting_masters ++ List(a_bus_requesting_master)
+
+        WishboneSharedBusInterconnection(
+          masters,
+          slaves
+        )
+
+        when(!reset) {
+          val bus_has_been_granted = slaves(0).io.cycle
+          Chisel.assert(bus_has_been_granted)
+          stop()
+        }
+      }
+    }
+  }
+}

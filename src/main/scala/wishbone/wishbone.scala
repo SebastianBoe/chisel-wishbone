@@ -52,18 +52,58 @@ object WishboneSharedBusInterconnection
     }
 
     // Determine which master should be granted the bus.
-    def arbitrate(grantedMasterIsUsingBus: Bool, numMasters: Int) : UInt = {
-      // Use a Counter to round-robin select one of the masters. When
-      // a master has been granted the bus, keep granting it until the
-      // master lets go.
-      Counter(! grantedMasterIsUsingBus, numMasters)._1
+    def arbitrate(busRequests: Vec[Bool]) : UInt = {
+      val grant       = Wire(UInt())
+      val grant_valid = Wire(Bool())
+
+      val grant_prev       = RegNext(grant)
+      val grant_prev_valid = RegNext(grant_valid)
+
+      val bus_is_requested = busRequests.contains(Bool(true))
+
+      // HW for choosing a new master. The signal is unused when a
+      // multi-cycle transfer is underway or when no masters are
+      // requesting the bus. The HW is currently choosing the lowest
+      // index master that is requesting the bus, so it is
+      // implementing a priority arbiter, but it could easily be
+      // modifed to do a safer strategy like round-robin.
+      val highest_priority_master = busRequests.indexWhere(Bool(true) === _)
+
+      when(grant_prev_valid) {
+        // The bus was granted in the previous cycle
+        when(busRequests(grant_prev)){
+          // The bus is still being requested by the same master
+          grant_valid := Bool(true)
+          grant       := grant_prev
+        } otherwise {
+          // The bus is no longer being requested by the previous master
+
+          grant       := highest_priority_master
+          grant_valid := bus_is_requested
+        }
+      } otherwise {
+        // The bus was free last cycle
+        when(bus_is_requested) {
+          // A new master has started requesting the bus
+
+          grant       := highest_priority_master
+          grant_valid := Bool(true)
+        } otherwise {
+          // No-one is requesting the bus
+          grant := 0.U
+          grant_valid := Bool(false)
+        }
+      }
+
+      grant
     }
 
     // Utility structures
     val masterIos = masters.map(_.io)
+    val masterRequestsVec = Vec(masterIos.map(_.cycle))
 
     val bus = Wire(new WishboneIO)
-    val masterIndex = arbitrate(bus.cycle, masters.size)
+    val masterIndex = arbitrate(masterRequestsVec)
     bus := Vec(masterIos)(masterIndex)
 
     for (slave <- slaves) {
