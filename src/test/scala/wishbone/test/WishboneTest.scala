@@ -356,10 +356,9 @@ class E extends WishbonePropSpec {
         val cnt = Counter(!reset, 16)
         switch(cnt._1){
           is(0.U) {
-            Chisel.assert(slave.io.cycle === 0.U)
+            Chisel.assert(slave.io.strobe === 0.U)
           }
           is(1.U) {
-            Chisel.assert(slave.io.cycle  === 0.U)
             Chisel.assert(slave.io.strobe === 0.U)
           }
           is(2.U) {
