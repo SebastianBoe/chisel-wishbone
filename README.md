@@ -10,7 +10,7 @@ to interconnect slaves and masters using the Wishbone protocol.
 - [x] Maintain a unit test suite for all supported features
 - [x] Point-to-point interconnnections
   - [x] Trivially supported with a Bundle
-- [ ] Shared-bus interconnnections
+- [x] Shared-bus interconnnections
   - [x] Discontinuous and individually-sized slave memory maps
     - [ ] Benchmark partial address decoding against current implementation
   - [ ] Verify slave protocol compliance at simulation time
