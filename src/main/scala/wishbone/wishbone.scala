@@ -51,14 +51,19 @@ object WishboneSharedBusInterconnection
       return
     }
 
+    // Determine which master should be granted the bus.
+    def arbitrate(grantedMasterIsUsingBus: Bool, numMasters: Int) : UInt = {
+      // Use a Counter to round-robin select one of the masters. When
+      // a master has been granted the bus, keep granting it until the
+      // master lets go.
+      Counter(! grantedMasterIsUsingBus, numMasters)._1
+    }
+
     // Utility structures
     val masterIos = masters.map(_.io)
 
-    // Use a Counter and a Vec to round-robin select one of the
-    // masters. When a master has been granted the bus, keep granting
-    // it until the master lets go.
     val bus = Wire(new WishboneIO)
-    val (masterIndex, wrap) = Counter(! bus.cycle, masters.size)
+    val masterIndex = arbitrate(bus.cycle, masters.size)
     bus := Vec(masterIos)(masterIndex)
 
     for (slave <- slaves) {
