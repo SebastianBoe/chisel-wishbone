@@ -12,7 +12,7 @@ trait WishboneIp {
 }
 
 trait WishboneSlave  extends WishboneIp {  def inAddressSpace(address: UInt): Bool }
-trait WishboneMaster extends WishboneIp { }
+trait WishboneMaster extends WishboneIp {                                          }
 
 class WishboneIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
 /**
