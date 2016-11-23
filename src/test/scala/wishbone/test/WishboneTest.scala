@@ -3,7 +3,6 @@
 package examples.test
 
 import Chisel.iotesters._
-import wishbone.WishboneSharedBusInterconnection
 import Chisel.testers._
 import wishbone._
 
@@ -52,7 +51,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
       assertTesterPasses{
         new BasicTester {
           for(num_masters <- 0 to 3; num_slaves <- 0 to 3) {
-            WishboneSharedBusInterconnection(
+            WishboneInterconnection(SharedBus,
               nMasters(num_masters),
               nSlaves (num_slaves)
             )
@@ -69,7 +68,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
         val mastersIO = nMasters(1)
         val slavesIO  = nSlaves (1)
 
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           mastersIO,
           slavesIO
         )
@@ -87,7 +86,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
         when( cnt.inc() ) { stop() }
 
         val slave = Module(new ExampleSlave(0))
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           Module(new Module with WishboneMaster { val io = IO(new WishboneIO()); }),
           slave
         )
@@ -101,7 +100,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
       new BasicTester{
         val slaves = nSlaves(2)
         val masters = nMasters(3)
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           masters,
           slaves
         )
@@ -130,7 +129,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
           io.address := cnt
         })
 
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           master,
           slave
         )
@@ -152,7 +151,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
         val slave_1 = Module(new ExampleSlave(0))
         val master  = Module(new ExampleMaster( ))
 
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           master,
           List(slave_0, slave_1)
         )
@@ -176,7 +175,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
       {
         val masters = nMasters(2)
         val slaves = nSlaves(2)
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           masters,
           slaves
         )
@@ -204,7 +203,7 @@ class A extends ChiselPropSpec {
       {
         val masters = nMasters(2)
         val slaves = nSlaves(2)
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           masters,
           slaves
         )
@@ -230,7 +229,7 @@ class B extends ChiselPropSpec {
       {
         val masters = nMasters(2)
         val slaves = nSlaves(2)
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           masters,
           slaves
         )
@@ -255,7 +254,7 @@ class C extends WishbonePropSpec {
     assertTesterFails{
       new BasicTester
       {
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           // A master that negates strobe
           Module(
             new Module with WishboneMaster {
@@ -305,7 +304,7 @@ class D extends WishbonePropSpec {
           }
         )
 
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           master,
           slave
         )
@@ -345,7 +344,7 @@ class E extends WishbonePropSpec {
           }
         )
 
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           masters,
           slave
         )
@@ -396,7 +395,7 @@ class F extends WishbonePropSpec {
       new BasicTester
       {
         val masters = nMasters(2)
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           masters,
           nSlaves(1)
         )
@@ -434,7 +433,7 @@ class G extends WishbonePropSpec {
         val slaves = nSlaves(6)
         val masters = non_bus_requesting_masters ++ List(a_bus_requesting_master)
 
-        WishboneSharedBusInterconnection(
+        WishboneInterconnection(SharedBus,
           masters,
           slaves
         )

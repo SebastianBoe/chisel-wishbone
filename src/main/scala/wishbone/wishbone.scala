@@ -14,6 +14,9 @@ trait WishboneIp {
 trait WishboneSlave  extends WishboneIp {  def inAddressSpace(address: UInt): Bool }
 trait WishboneMaster extends WishboneIp {                                          }
 
+trait BusType
+case object SharedBus extends BusType
+
 class WishboneIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
 /**
  * See wbspec_b4.pdf Chapter 2. Interface Specification.
@@ -37,20 +40,27 @@ class WishboneIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
   // val tgc = UInt(OUTPUT, tagSize)
 }
 
-object WishboneSharedBusInterconnection
+object WishboneInterconnection
 {
   // Convenience functions to be able to call this function with either a list or an element
-  def apply(master :     WishboneMaster , slave :     WishboneSlave ){ apply(List(master), List(slave)) }
-  def apply(master :     WishboneMaster , slaves: Seq[WishboneSlave]){ apply(List(master),      slaves) }
-  def apply(masters: Seq[WishboneMaster], slave :     WishboneSlave ){ apply(     masters, List(slave)) }
-  def apply(masters: Seq[WishboneMaster], slaves: Seq[WishboneSlave])
-  : Unit = {
+  def apply(bus: BusType, master :     WishboneMaster , slave :     WishboneSlave ){ apply(bus, List(master), List(slave)) }
+  def apply(bus: BusType, master :     WishboneMaster , slaves: Seq[WishboneSlave]){ apply(bus, List(master),      slaves) }
+  def apply(bus: BusType, masters: Seq[WishboneMaster], slave :     WishboneSlave ){ apply(bus,      masters, List(slave)) }
+  def apply(bus: BusType, masters: Seq[WishboneMaster], slaves: Seq[WishboneSlave]): Unit = {
     if(masters.isEmpty || slaves.isEmpty){
-      // We need at least one master and at least one slave to make a
-      // shared bus.
+      // We need at least one master and at least one slave to
+      // interconnect masters and slaves
       return
     }
+    bus match {
+      case SharedBus => WishboneSharedBusInterconnection(masters, slaves)
+    }
+  }
+}
 
+private object WishboneSharedBusInterconnection
+{
+  def apply(masters: Seq[WishboneMaster], slaves: Seq[WishboneSlave]): Unit = {
     // Determine which master should be granted the bus.
     def arbitrate(busRequests: Vec[Bool]) : UInt = {
       val grant       = Wire(UInt())
