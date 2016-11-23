@@ -16,6 +16,7 @@ trait WishboneMaster extends WishboneIp {                                       
 
 trait BusType
 case object SharedBus extends BusType
+case object Crossbar  extends BusType
 
 class WishboneIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
 /**
@@ -54,6 +55,7 @@ object WishboneInterconnection
     }
     bus match {
       case SharedBus => WishboneSharedBusInterconnection(masters, slaves)
+      case Crossbar  => WishboneCrossbarInterconnection (masters, slaves)
     }
   }
 }
@@ -163,5 +165,78 @@ private object WishboneSharedBusInterconnection
         "Slaves must negate ack when their strobe is negated."
       )
     }
+  }
+}
+
+private object WishboneCrossbarInterconnection
+{
+  def apply(masters: Seq[WishboneMaster], slaves: Seq[WishboneSlave]): Unit = {
+    // To implement a crossbar between m masters and s slaves we use
+    // the most naive implementation conceivable. We create a shared
+    // bus for each master and a shared bus for each slave. And then
+    // we hook up every masters shared bus to every slaves shared bus.
+
+    // TODO: Read up on how to efficiently implement a crossbar.
+
+    val master_to_slave_buses_map = masters map {
+      m => (
+        m,
+        List.tabulate(slaves.length)(slaveIndex =>
+          new WishboneSlave {
+            val my_io = Wire(Flipped(new WishboneIO()))
+            def io = my_io
+            def inAddressSpace(address: UInt): Bool = slaves(slaveIndex).inAddressSpace(address)
+          }
+        )
+      )
+    } toMap
+
+    val slave_to_master_buses_map = slaves map {
+      s => (
+        s,
+        List.fill(masters.length)(
+          new WishboneMaster {
+            val my_io = Wire(new WishboneIO())
+            def io = my_io
+          }
+        )
+      )
+    } toMap
+
+    for (i <- 0 until masters.length ){
+      for (j <- 0 until slaves.length ){
+        val master = masters(i)
+        val slave = slaves(j)
+        val bus_master_slave = master_to_slave_buses_map(master)(j)
+        val bus_slave_master = slave_to_master_buses_map(slave )(i)
+
+        val b_m_s = bus_master_slave
+        val b_s_m = bus_slave_master
+
+        b_s_m.io.address      := b_m_s.io.address
+        b_s_m.io.dataToSlave  := b_m_s.io.dataToSlave
+        b_s_m.io.writeEnable  := b_m_s.io.writeEnable
+        b_s_m.io.select       := b_m_s.io.select
+        b_s_m.io.strobe       := b_m_s.io.strobe
+        b_s_m.io.cycle        := b_m_s.io.cycle
+
+        b_m_s.io.dataToMaster := b_s_m.io.dataToMaster
+        b_m_s.io.ack          := b_s_m.io.ack
+      }
+    }
+
+    for (master <- masters)
+      WishboneInterconnection(
+        SharedBus,
+        master,
+        master_to_slave_buses_map(master)
+      )
+
+    for (slave <- slaves)
+      WishboneInterconnection(
+        SharedBus,
+        slave_to_master_buses_map(slave),
+        slave
+      )
   }
 }
