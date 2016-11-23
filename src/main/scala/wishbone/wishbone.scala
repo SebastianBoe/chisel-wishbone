@@ -108,10 +108,12 @@ object WishboneSharedBusInterconnection
 
     for (slave <- slaves) {
       // Default to connecting all of the slave's signals to the bus
-      slave.io <> bus
-
-      slave.io.strobe :=
-        bus.strobe && slave.inAddressSpace(bus.address)
+      slave.io.address     := bus.address
+      slave.io.dataToSlave := bus.dataToSlave
+      slave.io.writeEnable := bus.writeEnable
+      slave.io.select      := bus.select
+      slave.io.cycle       := bus.cycle
+      slave.io.strobe      := bus.strobe && slave.inAddressSpace(bus.address)
     }
 
     val slaveBus = Mux1H(
