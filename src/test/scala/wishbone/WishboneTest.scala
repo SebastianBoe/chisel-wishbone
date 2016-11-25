@@ -2,6 +2,8 @@
 
 package wishbone.test
 
+import org.scalatest._
+import org.scalatest.prop._
 import Chisel.iotesters._
 import Chisel.testers._
 import wishbone._
@@ -9,6 +11,7 @@ import wishbone._
 import chisel3._
 import chisel3.util._
 import chisel3.core.SeqUtils
+import chisel3.iotesters._
 
 class ExampleMaster extends Module with WishboneMaster {
   val io = IO(new WishboneIO())
@@ -37,21 +40,30 @@ class ExampleSlave(i: Int) extends Module with WishboneSlave {
 object nMasters { def apply(i: Int) = for (i <- 0 until i) yield Module(new ExampleMaster( )) }
 object nSlaves  { def apply(i: Int) = for (i <- 0 until i) yield Module(new ExampleSlave (i)) }
 
-class WishbonePropSpec extends ChiselPropSpec {
+abstract class WishbonePropSpec extends fixture.PropSpec with ChiselRunners with PropertyChecks {
   // assertTesterFails is not yet in a released version of Chisel3. But
   // it is coming ...
   // TODO: Remove this function after the next Chisel3 release.
   def assertTesterFails(t: => BasicTester, additionalVResources: Seq[String] = Seq()): Unit = {
     assert(!runTester(t, additionalVResources))
   }
+
+  type FixtureParam = BusType
+
+  def getBus: BusType
+
+  override def withFixture(test: OneArgTest) = { test(getBus) }
 }
 
-class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
+class SharedBusSpec extends CommonSpec { def getBus = SharedBus }
+class CrossbarSpec  extends CommonSpec { def getBus = Crossbar  }
+
+abstract class CommonSpec extends WishbonePropSpec {
   property("Compiles with x masters and y slaves, for x,y in [0,3]"){
-      assertTesterPasses{
+      bus: BusType => assertTesterPasses{
         new BasicTester {
           for(num_masters <- 0 to 3; num_slaves <- 0 to 3) {
-            WishboneInterconnection(SharedBus,
+            WishboneInterconnection(bus,
               nMasters(num_masters),
               nSlaves (num_slaves)
             )
@@ -63,12 +75,12 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
   }
 
   property("In a 1x1 bus, the slave receives a strobe when the master makes a request"){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester {
         val mastersIO = nMasters(1)
         val slavesIO  = nSlaves (1)
 
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           mastersIO,
           slavesIO
         )
@@ -79,14 +91,14 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
   }
 
   property("In a 1x1 bus, when the master isn't strobing the slave won't receive a strobe."){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester{
         val max = 3
         val cnt = Counter(max)
         when( cnt.inc() ) { stop() }
 
         val slave = Module(new ExampleSlave(0))
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           Module(new Module with WishboneMaster { val io = IO(new WishboneIO()); }),
           slave
         )
@@ -96,11 +108,11 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
   }
 
   property("Only one slave recieves a strobe at a time"){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester{
         val slaves = nSlaves(2)
         val masters = nMasters(3)
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           masters,
           slaves
         )
@@ -111,7 +123,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
   }
 
   property("A slave only receives accesses for it's address range"){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester
       {
         val slave = Module(
@@ -129,7 +141,7 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
           io.address := cnt
         })
 
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           master,
           slave
         )
@@ -144,14 +156,14 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
   }
 
   property("An assert will trigger if the slave address spaces overlap"){
-    assertTesterFails{ // NB: assertTesterFails, not assertTesterPasses
+    bus: BusType => assertTesterFails{ // NB: assertTesterFails, not assertTesterPasses
       new BasicTester
       {
         val slave_0 = Module(new ExampleSlave(0))
         val slave_1 = Module(new ExampleSlave(0))
         val master  = Module(new ExampleMaster( ))
 
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           master,
           List(slave_0, slave_1)
         )
@@ -170,12 +182,12 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
            and strobe [STB_O] signals. The shared bus output signals
            are routed to the inputs on the SLAVE interfaces.' --
            Wishbone B4"""){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester
       {
         val masters = nMasters(2)
         val slaves = nSlaves(2)
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           masters,
           slaves
         )
@@ -190,20 +202,17 @@ class WishboneSharedBusInterconnectionSpec extends WishbonePropSpec {
       }
     }
   }
-}
-
-class A extends ChiselPropSpec {
   property("""'[the terminating signals [ACK_I], [RTY_I] and [ERR_I]]
            are enabled at the MASTER that acquired the bus. For
            example, if MASTER #0 is granted the bus by the arbiter,
            then the [ACK_I], [RTY_I] and [ERR_I] are enabled at MASTER
            #0.' -- Wishbone B4"""){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester
       {
         val masters = nMasters(2)
         val slaves = nSlaves(2)
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           masters,
           slaves
         )
@@ -218,18 +227,15 @@ class A extends ChiselPropSpec {
       }
     }
   }
-}
-
-class B extends ChiselPropSpec {
   property("""'[the terminating signals [ACK_I], [RTY_I] and [ERR_I]]
            are not enabled at the masters that don't aquire the bus.'
            -- Wishbone B4, page 120 """){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester
       {
         val masters = nMasters(2)
         val slaves = nSlaves(2)
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           masters,
           slaves
         )
@@ -244,17 +250,14 @@ class B extends ChiselPropSpec {
       }
     }
   }
-}
-
-class C extends WishbonePropSpec {
   property("""An assertion is triggered if standard mode SLAVE
            interfaces don't negate [ACK_O] when their [STB_I] is
            negated.
            -- B4, OBSERVATION 3.10"""){
-    assertTesterFails{
+    bus: BusType => assertTesterFails{
       new BasicTester
       {
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           // A master that negates strobe
           Module(
             new Module with WishboneMaster {
@@ -280,11 +283,8 @@ class C extends WishbonePropSpec {
       }
     }
   }
-}
-
-class D extends WishbonePropSpec {
   property("""Asynchronous slaves are supported."""){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester
       {
         val master = Module(
@@ -304,7 +304,7 @@ class D extends WishbonePropSpec {
           }
         )
 
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           master,
           slave
         )
@@ -315,11 +315,8 @@ class D extends WishbonePropSpec {
       }
     }
   }
-}
-
-class E extends WishbonePropSpec {
   property("""Slow synchronous masters will be granted the bus until they are done with it."""){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester
       {
         // Create 2 masters
@@ -344,7 +341,7 @@ class E extends WishbonePropSpec {
           }
         )
 
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           masters,
           slave
         )
@@ -387,15 +384,12 @@ class E extends WishbonePropSpec {
       }
     }
   }
-}
-
-class F extends WishbonePropSpec {
   property("""A master will hold the bus until it is released."""){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester
       {
         val masters = nMasters(2)
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           masters,
           nSlaves(1)
         )
@@ -408,12 +402,9 @@ class F extends WishbonePropSpec {
       }
     }
   }
-}
-
-class G extends WishbonePropSpec {
   property("""When only one master is requesting the bus there is no
            delay before the bus is granted to it."""){
-    assertTesterPasses{
+    bus: BusType => assertTesterPasses{
       new BasicTester
       {
         val a_bus_requesting_master = Module(
@@ -433,7 +424,7 @@ class G extends WishbonePropSpec {
         val slaves = nSlaves(6)
         val masters = non_bus_requesting_masters ++ List(a_bus_requesting_master)
 
-        WishboneInterconnection(SharedBus,
+        WishboneInterconnection(bus,
           masters,
           slaves
         )
