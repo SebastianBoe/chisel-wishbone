@@ -1,6 +1,6 @@
 // See LICENSE for license details.
 
-package examples.test
+package wishbone.test
 
 import Chisel.iotesters._
 import Chisel.testers._
