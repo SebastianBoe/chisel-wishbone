@@ -13,12 +13,12 @@ import chisel3.util._
 import chisel3.core.SeqUtils
 import chisel3.iotesters._
 
-class ExampleMaster extends Module with WishboneMaster {
+class ExampleMaster(i: Int = 0) extends Module with WishboneMaster {
   val io = IO(new WishboneIO())
 
   io.cycle   := Bool(true)
   io.strobe  := Bool(true)
-  io.address := 0.U
+  io.address := i.U
 
   io.dataToSlave := UInt(1)
 
