@@ -438,3 +438,39 @@ abstract class CommonSpec extends WishbonePropSpec {
     }
   }
 }
+
+class CrossbarSpecificSpec extends WishbonePropSpec {
+  def getBus = Crossbar
+
+  property("""In a 2x2 network, masters can talk to slaves in parallel with each other."""){
+    bus: BusType => assertTesterPasses{
+      new BasicTester
+      {
+        // 2 masters where master i requests address i
+        val masters = List(
+          Module(new ExampleMaster(0)),
+          Module(new ExampleMaster(1))
+        )
+        // 2 slaves where slave i accepts address i
+        val slaves = nSlaves(2)
+        WishboneInterconnection(bus,
+          masters,
+          slaves
+        )
+        val cnt = Counter(!reset, 6)
+
+        for ( i <- 0 until 2)
+          when(cnt._1 > 1.U) {
+          Chisel.assert(masters(i).io.cycle, s"$i")
+          Chisel.assert(masters(i).io.strobe, s"$i")
+
+          Chisel.assert(slaves(i).io.cycle, s"$i")
+          Chisel.assert(slaves(i).io.strobe, s"$i")
+          Chisel.assert(slaves(i).io.dataToSlave === (i + 1).U, s"$i")
+        }
+
+        when( cnt._2 ) { stop() }
+      }
+    }
+  }
+}
