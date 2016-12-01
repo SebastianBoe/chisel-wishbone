@@ -411,6 +411,7 @@ abstract class CommonSpec extends WishbonePropSpec {
           new Module with WishboneMaster {
             val io = IO(new WishboneIO())
             io.cycle   := !reset
+            io.strobe := io.cycle
           }
         )
 
