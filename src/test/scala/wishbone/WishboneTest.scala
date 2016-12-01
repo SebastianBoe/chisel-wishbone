@@ -20,7 +20,7 @@ class ExampleMaster(i: Int = 0) extends Module with WishboneMaster {
   io.strobe  := Bool(true)
   io.address := i.U
 
-  io.dataToSlave := UInt(1)
+  io.dataToSlave := UInt(i + 1)
 
   val myVec = Wire( Vec(32 / 8, Bool()) )
   myVec foreach (_ := Bool(true))
