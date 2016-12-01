@@ -22,10 +22,9 @@ class ExampleMaster(i: Int = 0) extends Module with WishboneMaster {
 
   io.dataToSlave := UInt(i + 1)
 
-  val myVec = Wire( Vec(32 / 8, Bool()) )
-  myVec foreach (_ := Bool(true))
-
-  io.select      := myVec
+  for(i <- 0 until 32 / 8) {
+    io.select(i) := Bool(true)
+  }
   io.writeEnable := Bool(false)
 }
 
