@@ -18,6 +18,16 @@ trait BusType
 case object SharedBus extends BusType
 case object Crossbar  extends BusType
 
+object Config {
+  // TODO: How can I do this cleanly without a global variable?
+
+  /**
+   * This config variable determines whether or not simulation-only
+   * assertions for input validation should be included.
+   */
+  var pruneSimulationAssertions = false
+}
+
 class WishboneIO(portSize: Int = 32, granularity: Int = 8) extends Bundle {
 /**
  * See wbspec_b4.pdf Chapter 2. Interface Specification.
@@ -149,21 +159,23 @@ private object WishboneSharedBusInterconnection
     //                  Input validation                          //
     ////////////////////////////////////////////////////////////////
 
-    // The bus address triggers an address match for at most 1 slave
-    val matches : Seq[Bool] = slaves.map(_.inAddressSpace(bus.address))
-    val num_matches = PopCount(matches)
-    Chisel.assert(num_matches <= 1.U, "The address space of slaves must not overlap.")
+    if(! wishbone.Config.pruneSimulationAssertions) {
+      // The bus address triggers an address match for at most 1 slave
+      val matches : Seq[Bool] = slaves.map(_.inAddressSpace(bus.address))
+      val num_matches = PopCount(matches)
+      Chisel.assert(num_matches <= 1.U, "The address space of slaves must not overlap.")
 
-    // Slaves have to negate ACK_O when their STB_I is negated.
-    for (slave <- slaves) {
-      Chisel.assert(
-        Mux(
-          slave.io.strobe,
-          Bool(true),
-          slave.io.ack === Bool(false)
-        ),
-        "Slaves must negate ack when their strobe is negated."
-      )
+      // Slaves have to negate ACK_O when their STB_I is negated.
+      for (slave <- slaves) {
+        Chisel.assert(
+          Mux(
+            slave.io.strobe,
+            Bool(true),
+            slave.io.ack === Bool(false)
+          ),
+          "Slaves must negate ack when their strobe is negated."
+        )
+      }
     }
   }
 }
