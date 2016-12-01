@@ -19,4 +19,5 @@ to interconnect slaves and masters using the Wishbone protocol.
     - [ ] Assert if a master hogs the bus for x cycles
   - [ ] User-friendly support for normal segmented memory maps
   - [ ] Multiple arbitration strategies
-- [ ] Cross-bar interconnnections
+- [x] Crossbar interconnnections
+- [ ] Make the generated code more readable
