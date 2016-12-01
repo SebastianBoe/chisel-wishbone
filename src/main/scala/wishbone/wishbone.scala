@@ -222,6 +222,10 @@ private object WishboneCrossbarInterconnection
         val bus_master_slave = master_to_slave_buses_map(master)(j)
         val bus_slave_master = slave_to_master_buses_map(slave )(i)
 
+        // The below code creates an inverted connection between a
+        // slave and a master. In this case the slave controls the
+        // master. The slave is only supposed to respond when it is
+        // strobed, so we AND together the strobe and cycle signals.
         val b_m_s = bus_master_slave
         val b_s_m = bus_slave_master
 
@@ -229,8 +233,10 @@ private object WishboneCrossbarInterconnection
         b_s_m.io.dataToSlave  := b_m_s.io.dataToSlave
         b_s_m.io.writeEnable  := b_m_s.io.writeEnable
         b_s_m.io.select       := b_m_s.io.select
-        b_s_m.io.strobe       := b_m_s.io.strobe
-        b_s_m.io.cycle        := b_m_s.io.cycle
+
+        val valid = b_m_s.io.strobe && b_m_s.io.cycle
+        b_s_m.io.strobe       := valid
+        b_s_m.io.cycle        := valid
 
         b_m_s.io.dataToMaster := b_s_m.io.dataToMaster
         b_m_s.io.ack          := b_s_m.io.ack
